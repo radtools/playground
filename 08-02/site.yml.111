@@ -40,8 +40,8 @@
   tasks:
     - name: Upload tar.gz Elasticsearch from remote URL
       get_url:
-        url: "https://github.com/elastic/elasticsearch/archive/refs/tags/v8.3.2.tar.gz"
-        dest: "/tmp/elasticsearch-8.3.2.tar.gz"
+        url: "https://fossies.org/linux/www/elasticsearch-8.3.2-linux-x86_64.tar.gz"
+        dest: "/tmp/elasticsearch-8.3.2-linux-x86_64.tar.gz"
         mode: 0755
         timeout: 60
         force: true
@@ -70,39 +70,3 @@
         src: templates/elk.sh.j2
         dest: /etc/profile.d/elk.sh
       tags: elastic
-- name: install Kibana
-  hosts: kibana
-  tasks:
-    - name: Upload tar.gz Kibana from remote URL
-      get_url:
-        url: "https://github.com/elastic/kibana/archive/refs/tags/v8.3.2.tar.gz"
-        dest: "/tmp/kibana-8.3.2.tar.gz"
-        mode: 0755
-        timeout: 60
-        force: true
-        validate_certs: false
-      register: get_kibana
-      until: get_kibana is succeeded
-      tags: kibana
-    - name: Create directrory for Kibana ({{ kibana_home }})
-      file:
-        path: "{{ kibana_home }}"
-        state: directory
-      tags: kibana 
-    - name: Extract Kibana in the installation directory
-      become: true
-      unarchive:
-        copy: false
-        src: "/tmp/kibana-8.3.2.tar.gz"
-        dest: "{{ kibana_home }}"
-        extra_opts: [--strip-components=1]
-        creates: "{{ kibana_home }}/bin/kibana"
-      tags: 
-        - kibana
-    - name: Set environment kibana
-      become: true
-      template:
-        src: templates/kib.sh.j2
-        dest: /etc/profile.d/kib.sh
-      tags: kibana
-      #https://github.com/elastic/logstash/archive/refs/tags/v8.3.2.tar.gz
