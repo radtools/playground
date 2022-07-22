@@ -1,6 +1,7 @@
 ---
 elasticsearch:
   hosts:
+<<<<<<< HEAD
     elastic:
       ansible_connection: docker
 kibana:
@@ -8,3 +9,8 @@ kibana:
     kibana:
       ansible_connection: docker
 
+=======
+    localhost:
+      ansible_connection: ssh
+      ansible_user: root
+>>>>>>> 5d7f1a892c576395190d23d609af2bebda3aa561
