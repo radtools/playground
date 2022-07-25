@@ -1,0 +1,5 @@
+---
+logstash_version: "8.3.2"
+logstash_home: "/opt/logstash/{{ logstash_version }}"
+elast_con_host: "{{ elastic_ip.stdout }}"
+elast_con_port: 5601
