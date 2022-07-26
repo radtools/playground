@@ -1,29 +1,26 @@
 ---
-#Обновляемся
-# - name: Обновляем soft на всех хостах
-#   hosts: all
-#   #become: true
-#   tasks:
-#     - name: Update & upgrade
-#       apt:
-#         upgrade: yes
-#         update_cache: yes
-#     - name: Python Update Task
-#       apt:
-#         pkg: python
-#         state: latest
+# #Обновляем хосты
+- name: Обновляем soft на всех хостах
+  hosts: all
+  become: true
+  tasks:
+  - name: Update & upgrade
+    apt:
+     upgrade: yes
+     update_cache: yes
+  
 
  #Ставим Java на все хосты
 
 - name: Устанавливаем Java из файла
   hosts: all
   tasks:
-
     - name: Set facts for Java 11 vars
       set_fact:
         java_home: "/opt/jdk/{{ java_jdk_version }}"
       tags: java
-    - name: Upload .tar.gz file containing binaries from local storage
+
+    - name: Скачиваем архив с локального хранилища
       copy:
         src: "{{ java_oracle_jdk_package }}"
         dest: "/tmp/jdk-{{ java_jdk_version }}.tar.gz"
@@ -31,16 +28,14 @@
       until: download_java_binaries is succeeded
       tags: ['never']
 
-
-    - name: Ensure installation dir exists
+    - name: Существует ли директория установки?
       become: true
       file:
         state: directory
         path: "{{ java_home }}"
       tags: java
 
-
-    - name: Extract java in the installation directory
+    - name: Распаковка Java в директорию установки
       become: true
       unarchive:
         copy: false
@@ -50,21 +45,21 @@
         creates: "{{ java_home }}/bin/java"
       tags: java
 
-
-    - name: Export environment variables
+    - name: Экспорт переменных окружения для JAVA
       become: true
       template:
         src: jdk.sh.j2
         dest: /etc/profile.d/jdk.sh
       tags: java
 
+    
 #Ставим эластик из гита
 
 - name: Установка Elasticsearch на хост elastic
   hosts: elasticsearch
   tasks:
 
-    - name: Upload tar.gz Elasticsearch from remote URL
+    - name: Скачиваем архив Elasticsearch
       get_url:
         url: "https://github.com/elastic/elasticsearch/archive/refs/tags/v{{ elastic_version }}.tar.gz"
         dest: "/tmp/elasticsearch-{{ elastic_version }}.tar.gz"
@@ -77,14 +72,14 @@
       tags: elastic
 
 
-    - name: Create directrory for Elasticsearch
+    - name: Создаем директорию установки Elasticsearch
       file:
         state: directory
         path: "{{ elastic_home }}"
       tags: elastic
 
 
-    - name: Extract Elasticsearch in the installation directory
+    - name: Распаковываем архив ES в директорию установки
       become: true
       unarchive:
         copy: false
@@ -95,14 +90,19 @@
       tags: elastic
 
 
-    - name: Set environment Elastic
+    - name: Экспорт переменных окружения для Elastic
       become: true
       template:
         src: templates/elk.sh.j2
         dest: /etc/profile.d/elk.sh
       tags: elastic
-    
 
+    - name: Получаем IP хоста elasticsearch и сохраняем в переменую
+      delegate_to: localhost
+      shell: "docker inspect -f {% raw %} '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {% endraw %} elastic"
+      register: elastic_ip
+      check_mode: no
+      tags: elastic
 
 #Ставим Кибану
 
@@ -123,14 +123,14 @@
       tags: kibana
 
 
-    - name: Create directrory for Kibana ({{ kibana_home }})
+    - name: Создаем директорию установки для Kibana
       file:
         path: "{{ kibana_home }}"
         state: directory
       tags: kibana
 
 
-    - name: Extract Kibana in the installation directory
+    - name: Распаковка Kibana в директорию установки
       become: true
       unarchive:
         copy: false
@@ -141,30 +141,27 @@
       tags: kibana
 
 
-    - name: Set environment kibana
+    - name: Экспорт переменных окружения для kibana
       become: true
       template:
         src: templates/kib.sh.j2
         dest: /etc/profile.d/kib.sh
       tags: kibana
 
-# получаем IP elasic и ставим logstash
-- name: Deploy logstash
-  hosts: logstash
-  tasks:
+    - name: Создаем базовую конфигурацию kibana
+      become: true
+      template:
+       src: kibana.yml.j2
+       dest: "{{ kibana_home }}/config/kibana.yml"
+       mode: 0644   
 
-    - name: Получаем информацию по хосту elasticsearch
-      delegate_to: localhost
-      shell: "docker inspect -f {% raw %} '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {% endraw %} elastic"
-      register: elastic_ip
-      check_mode: no
-      tags: logstash
-
+# ставим logstash
+    
 - name: Устанавливаем logstagh из Гитхаба
   hosts: logstash
   check_mode: no
   tasks:
-  - name: Upload tar.gz logstash from remote URL
+  - name: Скачиваем logstash из Гитхаба
     get_url:
       url: "https://github.com/elastic/logstash/archive/refs/tags/v{{ logstash_version }}.tar.gz"
       dest: "/tmp/logstash-{{ logstash_version }}.tar.gz"
@@ -177,14 +174,14 @@
     tags: logstash
 
 
-  - name: Create directrory for logstash ({{ logstash_home }})
+  - name: Создаем директорию установки для logstash
     file:
      path: "{{ logstash_home }}"
      state: directory
     tags: logstash
 
 
-  - name: Extract Logstash in the installation directory
+  - name: Распаковка Logstash в директорию установки
     become: true
     unarchive:
       copy: false
@@ -195,7 +192,7 @@
     tags: logstash
 
 
-  - name: Set environment logstash
+  - name: Устанавливаем переменные для logstash
     become: true
     template:
       src: templates/log.sh.j2
@@ -203,7 +200,7 @@
     tags: logstash
 
 
-  - name: Set LS basic cfg
+  - name: Создаем базовую конфигурацию для logstash
     become: yes
     template:
       src: templates/logstash.conf.j2
