@@ -51,7 +51,12 @@
         src: jdk.sh.j2
         dest: /etc/profile.d/jdk.sh
       tags: java
-
+    - name: Получаем IP хоста elasticsearch и сохраняем в переменую
+      delegate_to: localhost
+      shell: "docker inspect -f {% raw %} '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {% endraw %} elastic"
+      register: elastic_ip
+      check_mode: no
+      tags: elastic 
     
 #Ставим эластик из гита
 
@@ -97,12 +102,6 @@
         dest: /etc/profile.d/elk.sh
       tags: elastic
 
-    - name: Получаем IP хоста elasticsearch и сохраняем в переменую
-      delegate_to: localhost
-      shell: "docker inspect -f {% raw %} '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {% endraw %} elastic"
-      register: elastic_ip
-      check_mode: no
-      tags: elastic
 
 #Ставим Кибану
 
@@ -147,6 +146,13 @@
         src: templates/kib.sh.j2
         dest: /etc/profile.d/kib.sh
       tags: kibana
+
+    # - name: Получаем IP хоста elasticsearch и сохраняем в переменую
+    #   delegate_to: localhost
+    #   shell: "docker inspect -f {% raw %} '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {% endraw %} elastic"
+    #   register: elastic_ip
+    #   check_mode: no
+    #   tags: elastic
 
     - name: Создаем базовую конфигурацию kibana
       become: true
@@ -198,7 +204,13 @@
       src: templates/log.sh.j2
       dest: /etc/profile.d/log.sh
     tags: logstash
-
+  
+  # - name: Получаем IP хоста elasticsearch и сохраняем в переменую
+  #   delegate_to: localhost
+  #   shell: "docker inspect -f {% raw %} '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {% endraw %} elastic"
+  #   register: elastic_ip
+  #   check_mode: no
+  #   tags: elastic
 
   - name: Создаем базовую конфигурацию для logstash
     become: yes
